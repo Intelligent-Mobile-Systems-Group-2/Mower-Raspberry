@@ -6,7 +6,7 @@ import json
 from picamera import PiCamera
 
 camera = PiCamera()
-action = "goForward\n"
+action = b"goForward\n"
 
 async def useSocket():
     async with websockets.connect("ws://localhost:8765") as websocket:
