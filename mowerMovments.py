@@ -1,16 +1,22 @@
 import serial
 import time
+import asyncio
+import websockets
+import json
 from picamera import PiCamera
 
-
-
-
 camera = PiCamera()
-action = b"goForward\n"
+action = "goForward\n"
 
+async def useSocket():
+    async with websockets.connect("ws://localhost:8765") as websocket:
+        # await websocket.send("Hello world!")
+        await websocket.send("hello nice to meet u")
+        await websocket.recv()
 
 if __name__ == '__main__':
     ser = serial.Serial('/dev/ttyUSB0',9600,timeout=1)
+    asyncio.run(useSocket());
     ser.reset_input_buffer()
     while True:
         #ser.write(action)
@@ -30,4 +36,3 @@ if __name__ == '__main__':
                     y = coordinates[2]
                     print( x + "," + y )
                     print("\ndone")
-
