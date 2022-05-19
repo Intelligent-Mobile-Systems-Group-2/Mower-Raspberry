@@ -7,93 +7,113 @@ import http.client
 import mimetypes
 from codecs import encode
 import requests
+from bluedot.btcomm import BluetoothServer
+from signal import pause
+import threading
+
+from requests.exceptions import ConnectionError
 
 
 camera = PiCamera()
 
+#Variables to control the Mower
 right = b"Right\n"
 back = b"Back\n"
 left = b"Left\n"
 forward = b"Forward\n"
 goRandom = b"GoRandom\n"
+stopMoving = b"StopMoving\n"
 
-connection = "connection"
 
-degree = 20066
-random = "random"
 
-obj_detection_interval = 100
-
-api = "http://ims.matteobernardi.fr/boundary-collision/"
-if __name__ == '__main__':
-    ser = serial.Serial('/dev/ttyUSB0',9600,timeout=1)
-    ser.reset_input_buffer()
-    
-    
+def sendBackend():
     
     while True:
-        #if  degree < 135  and degree > 45:
-        #    ser.write(forward)
-        #if  degree < 45 and degree > 0:
-         #   ser.write(right)
-        #if  degree < 359 and degree > 315:
-          #  ser.write(right)
-        #if  degree < 315  and degree > 225:
-         #   ser.write(back)
-        #if  degree < 225  and degree > 135:
-           # ser.write(left)
-        #if  random == "random":
-        ser.write(goRandom)
-        
-        
-        
         if ser.in_waiting > 0:
             line = ser.readline().decode('utf-8').rstrip()
             data = line.split(",")
             detected = data[0]
             x = data[1]
             y = data[2]
-            
-            detected_x = 0
-            detected_y = 0
+
             
             # if same coordinates as obj or line detected, skip this iteration
-            if detected_x == x and detected_y == y or detected == "NothingDetected":
-                continue
-            
+            #if detected_x == x and detected_y == y:
+             #   print("BREAK")#fix object detected
+              #  break
+            #else:
             data = len(data)
+            oldDetect = detected
+            detected_x = x
+            detected_x = y
+            coord_obj = {
+                "x": x,
+                "y": y
+            }
             
-            if data == 3:
-                detected_x = x
-                detected_x = y
-                coord_obj = {
-                    "x": x,
-                    "y": y
+            if detected == "objectDetected":
+                camera.capture("/home/pi/Pictures/img.jpg")
+                image_fd = open('/home/pi/Pictures/img.jpg', 'rb')
+                image_bin = image_fd.read()
+                image_fd.close()
+                image_obj = {
+                    "photo": image_bin
                 }
                 
-                print(detected, coord_obj)
-                
-                if detected == "objectDetected":
-                    camera.capture("/home/pi/Pictures/img.jpg")
-                    image_fd = open('/home/pi/Pictures/img.jpg', 'rb')
-                    image_bin = image_fd.read()
-                    image_fd.close()
-                    image_obj = {
-                        "photo": image_bin
-                    }
-                    
-                    try:
-                        response = requests.post("http://ims.matteobernardi.fr/object-collision", data=coord_obj, files=image_obj)
-                        print(response.text)
-                        print(response.status_code)
-                    except Exception as e:
-                          print("Error", e)
-            
-                elif detected == "lineDetected":
-                    try:
-                        response = requests.post("http://ims.matteobernardi.fr/boundary-collision", json=coord_obj)
-                        print(response.text)
-                        print(response.status_code)
-                    except Exception as e:
-                          print("Error", e)
+                try:
+                    response = requests.put("http://ims.matteobernardi.fr/object-collision", data=coord_obj, files=image_obj)
+                    print(response.text)
+                except ConnectionError as e:
+                      print("Error", e)
+
+            elif detected == "lineDetected":
+                try:
+                    response = requests.put("http://ims.matteobernardi.fr/boundary-collision", json=coord_obj)
+                    print(response.text)
+                except ConnectionError as e:
+                      print("Error", e)
+
+
+def data_received(data):
+    recievedData = data.split()
+    selectionMode = len(recievedData) #Check for how many objects in recievedData ex. 2
+    degree = int(recievedData[0]) #First value in recievedData changed to INT ex. 127
+    if selectionMode == 1:
+        ser.write(stopMoving)
+        time.sleep(3)
+        ser.write(goRandom)
+       
+    elif selectionMode == 2:
+        if  degree < 135  and degree > 45:
+            ser.write(right)
+            print("Right")
+        elif  degree < 45 and degree > 0:
+            ser.write(forward)
+            print("Forward")
+        elif  degree < 359 and degree > 315:
+            ser.write(forward)
+            print("Forward")
+        elif  degree < 315  and degree > 225:
+            ser.write(left)
+            print("Left")
+        elif  degree < 225  and degree > 135:
+            ser.write(back)
+            print("Back")
+                  
+    
+   
+# The Server API 
+api = "http://ims.matteobernardi.fr/boundary-collision/"
+if __name__ == '__main__':
+    ser = serial.Serial('/dev/ttyUSB0',9600,timeout=1)
+    ser.reset_input_buffer()
+    t = threading.Thread(target=sendBackend)
+    t.start()
+
+    while True:
+        
+        s = BluetoothServer(data_received)
+        pause()
+        
+
 
