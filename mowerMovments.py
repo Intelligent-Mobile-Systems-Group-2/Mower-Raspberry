@@ -26,7 +26,7 @@ stopMoving = b"StopMoving\n"
 
 
 
-def sendBackend():
+def sendDataToBackend():
     
     while True:
         if ser.in_waiting > 0:
@@ -35,13 +35,7 @@ def sendBackend():
             detected = data[0]
             x = data[1]
             y = data[2]
-
             
-            # if same coordinates as obj or line detected, skip this iteration
-            #if detected_x == x and detected_y == y:
-             #   print("BREAK")#fix object detected
-              #  break
-            #else:
             data = len(data)
             oldDetect = detected
             detected_x = x
@@ -86,19 +80,14 @@ def data_received(data):
     elif selectionMode == 2:
         if  degree < 135  and degree > 45:
             ser.write(right)
-            print("Right")
         elif  degree < 45 and degree > 0:
             ser.write(forward)
-            print("Forward")
         elif  degree < 359 and degree > 315:
             ser.write(forward)
-            print("Forward")
         elif  degree < 315  and degree > 225:
             ser.write(left)
-            print("Left")
         elif  degree < 225  and degree > 135:
             ser.write(back)
-            print("Back")
                   
     
    
@@ -107,7 +96,7 @@ api = "http://ims.matteobernardi.fr/boundary-collision/"
 if __name__ == '__main__':
     ser = serial.Serial('/dev/ttyUSB0',9600,timeout=1)
     ser.reset_input_buffer()
-    t = threading.Thread(target=sendBackend)
+    t = threading.Thread(target=sendDataToBackend)
     t.start()
 
     while True:
