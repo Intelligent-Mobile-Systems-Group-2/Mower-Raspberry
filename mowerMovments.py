@@ -10,12 +10,9 @@ import requests
 from bluedot.btcomm import BluetoothServer
 from signal import pause
 import threading
-
 from requests.exceptions import ConnectionError
 
-
 camera = PiCamera()
-
 #Variables to control the Mower
 right = b"Right\n"
 back = b"Back\n"
@@ -23,8 +20,6 @@ left = b"Left\n"
 forward = b"Forward\n"
 goRandom = b"GoRandom\n"
 stopMoving = b"StopMoving\n"
-
-
 
 def sendDataToBackend():
     
@@ -59,14 +54,12 @@ def sendDataToBackend():
                     print(response.text)
                 except ConnectionError as e:
                       print("Error", e)
-
             elif detected == "lineDetected":
                 try:
                     response = requests.put("http://ims.matteobernardi.fr/boundary-collision", json=coord_obj)
                     print(response.text)
                 except ConnectionError as e:
                       print("Error", e)
-
 
 def data_received(data):
     recievedData = data.split()
@@ -89,8 +82,6 @@ def data_received(data):
         elif  degree < 225  and degree > 135:
             ser.write(back)
                   
-    
-   
 # The Server API 
 api = "http://ims.matteobernardi.fr/boundary-collision/"
 if __name__ == '__main__':
@@ -98,11 +89,7 @@ if __name__ == '__main__':
     ser.reset_input_buffer()
     t = threading.Thread(target=sendDataToBackend)
     t.start()
-
     while True:
-        
         s = BluetoothServer(data_received)
         pause()
         
-
-
